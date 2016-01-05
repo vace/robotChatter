@@ -3,6 +3,7 @@
 # 相关资料
 [blog](http://www.5u55.cn/20151231-chat-with-robots.html)
 
+用到的库和工具 `vue` , `webpack`
 
 # 安装
 `npm install`
