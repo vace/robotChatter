@@ -2,8 +2,8 @@
   <div class="container">
     <div class="chat-app">
       <status-box :user="user"></status-box>
-      <friend-box :friends="friends"></friend-box>
-      <message-box :inputing="inputing" :messages="messages" :type="message_type"></message-box>
+      <friend-box :friends="message.friends"></friend-box>
+      <message-box :inputing="message.inpitingUsername" :messages="message.messages" :type="message_type"></message-box>
     </div>
   </div>
     
@@ -37,12 +37,13 @@ export default {
     return {
       user:me.user,
       talker:false,
-      friends: Message.friends,
-      messages:Message.messages,
-      message_type:MSG_TYPE,
-      inputing:Message.inpitingUserInfo
+      message:Message,
+      // friends: Message.friends,
+      // messages:Message.messages,
+      message_type:MSG_TYPE
     }
   },
+  
   events:{
     speak:function(msg){
       me.speak(msg);

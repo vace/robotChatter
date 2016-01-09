@@ -1,7 +1,7 @@
 <template>
 	<div class="box-bar">
         <div class="box-top">
-            <div class="chat-title">多啦A梦的圈子 <small class="robot">{{inputing.name}} 输入中...</small></div>
+            <div class="chat-title">多啦A梦的圈子 <small class="robot">{{inputing}} 输入中...</small></div>
             <div class="chat-operate">
                 <a href="https://github.com/vace/robotChatter" title="访问源代码地址" class="iconfont">&#xe735;</a>
                 <!-- <a class="iconfont">&#xe641;</a> -->

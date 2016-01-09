@@ -13,7 +13,7 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 		//正在输入的机器人
 		public static inputingUser: Rebot;
 
-		public static inpitingUserInfo: UserStruct;
+		public static inpitingUsername: string;
 
 		public static msgid: number = Date.now();
 
@@ -65,8 +65,7 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 			});
 
 			Message.inputingUser = robots[shuffle[0]];
-			Message.inpitingUserInfo = Message.inputingUser.user;
-
+			Message.inpitingUsername = Message.inputingUser.user.name;
 			this._nextreply = Date.now() + this._replyinterval;
 		}
 
