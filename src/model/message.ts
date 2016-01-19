@@ -30,7 +30,6 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 		private _replyinterval: number = 3000;
 		private _intvalid: number;
 
-		private $http:any;
 		public constructor(){
 			this._intvalid = setInterval(() => {
 				var _time: number = Date.now();
@@ -41,8 +40,6 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 					this._nextreply = _time + this._replyinterval;
 				}
 			},200);
-
-			this.$http = (new XHR()).exec;
 		}
 
 		//设置当前回复周期为下一个周期
@@ -69,6 +66,11 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 			this._nextreply = Date.now() + this._replyinterval;
 		}
 
+		/**
+		 * [_repeatTime 机器回复重复语句次数]
+		 * @type {number}
+		 */
+		private _repeatTime: number = 0;
 		//机器人回复
 		protected robotReply(){
 			if (!Message.inputingUser){
@@ -80,16 +82,11 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 			let content: string;
 			let lastmsg:string = Message.messages[Message.messages.length-1].content;
 
-			this.$http({
-			    method: "POST",
-				url: "http://www.tuling123.com/openapi/api",
-			    headers: {
-			        "Content-Type": "application/x-www-form-urlencoded",
-			    },
-				data: "userid=" + Message.msgid + "&key=" + NOW_USED + "&info=" + lastmsg
-			}).success((data) => {
-				data = JSON.parse(data);
-				if (data.code === 100000){
+			var key = NOW_USED;
+
+			this.http({ key, lastmsg },(data)=>{
+				console.log(data);
+				if (data.code === 100000 || data.code === 40002) {
 					content = data.text;
 				} else if (data.code === 200000){
 					content = '<a href="'+data.url+'">'+data.text+'</a>';
@@ -99,9 +96,25 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 				}
 				//用户昵称替换
 				content = content.replace(/__NAME__/g, robot.user.name);
-				robot.speak(content);
-			}).error(function (data) {
-			    console.log(data);
+
+				var isRepeat = false;
+				//如果上一句话===回复的话可能进入死循环了,转移话题
+				if (content === lastmsg){
+					//如果大于三次,切开话题
+					if(++this._repeatTime > 2){
+						this._repeatTime = 0;
+						isRepeat = true;
+						
+					}
+				}
+				//竟然在重复,需要我打乱他们的谈话
+				if(isRepeat){
+					content = Message.randomSpeek;
+					User.getInstance().speak(content);
+				}else{
+					robot.speak(content);
+				}
+				
 			});
 		}
 
@@ -141,28 +154,48 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 			}
 		}
 
+		public http({key, lastmsg}, onload): XMLHttpRequest {
+			var xhr = new XMLHttpRequest();
+			
+			var fd = [];
+			fd.push('userid=' + Message.msgid);
+			fd.push('key='+ key);
+			fd.push('info='+ encodeURIComponent( lastmsg) );
+
+
+			xhr.open('GET', 'http://www.tuling123.com/openapi/api?' + fd.join('&'));
+			xhr.onload = function(e){
+				console.log(xhr)
+				onload(xhr.response)
+			};
+			
+			xhr.send(null);
+			xhr.responseType = 'json';
+			return xhr;
+		}
+
+		private static _randomStr:string[] = [
+			'世界那么大能认识你，我觉得好不幸', 
+			'每当半夜的时候，打电话叫谁起床上厕所是一个很纠结的问题。',
+			'我5分钟还没回消息，请再读一遍此消息.',
+			'水清则无鱼，人贱则无敌。',
+			'你没有猪的形象，但是你有猪的气质。',
+			'没有嫁不到男人的女人，只有娶不到女人的男人。', 
+			'大河向东流啊，姑娘你单身何时休啊',
+			'神仙姐姐，我找你找的好苦',
+			'如何评价我这句开场白',
+			'你吃饭了没', 
+			'小生这厢有礼了.', 
+			'同志们辛苦了', 
+			'上网新手，请多多关照。', 
+			'有缘网上来相会'
+		];
+		public static get randomSpeek():string{
+			var len = Message._randomStr.length;
+			return Message._randomStr[Math.ceil(Math.random() * len)];
+		}
+
 	}
-
-	/**
-	 * 对象池
-	 */
-	// class RebotPool {
-	// 	private static _cache: Rebot[] = [];
-
-	// 	public static create(robotName: string): Rebot {
-	// 		var result: Rebot;
-	// 		if (RebotPool._cache.length) {
-	// 			result = RebotPool._cache.shift();
-	// 		}else{
-	// 			result = new Rebot(robotName);
-	// 		}
-	// 		return result;
-	// 	}
-
-	// 	public static destory(){
-
-	// 	}
-	// }
 
 	interface MessageContent{
 		// 消息唯一编号
@@ -331,153 +364,5 @@ let NOW_USED = KEYS[Math.floor(Math.random() * KEYS.length)];
 		}
 	}
 
-// }
-
-
-
-//todo: include all the media types.
-var MEDIA_TYPES: string[] = ["application/json", "application/x-www-form-urlencoded", "text/plain", "text/html"];
-var ALLOWED_METHODS: string[] = ["get", "post", "put", "delete"];
-
-var JSSON: Function = json => {
-	var sson = json;
-
-	sson.forEach = (fun, newThis?: Object) => {
-		var self = newThis || sson;
-
-		if (self == null)
-			throw new TypeError('this is null or not defined');
-		if (typeof fun !== "function")
-			throw new TypeError(fun + " is not a function");
-		for (var property in self) {
-			if (self.hasOwnProperty(property) && typeof self[property] !== "function")
-				fun.call(self, self[property], property, self);
-		}
-	};
-
-	sson.map = (fun, newThis?: Object): Array<any> => {
-		var self = newThis || sson,
-			arr: Array<any> = [],
-			temp;
-
-		if (self == null)
-			throw new TypeError('this is null or not defined');
-		if (typeof fun !== "function")
-			throw new TypeError(fun + " is not a function");
-		for (var property in self) {
-			if (self.hasOwnProperty(property) && typeof self[property] !== "function") {
-				temp = fun.call(self, self[property], property, self);
-				if (temp !== undefined)
-					arr.push(temp);
-			}
-		}
-		return arr;
-	};
-
-	return sson;
-};
-
-class XHR {
-	private xhr: XMLHttpRequest;
-
-	public exec:any;
-	constructor() {
-		var self = this;
-		this.xhr = new XMLHttpRequest();
-
-		var executer = (json) => self.call(json.method, json.url, json.data, json.headers);
-
-		executer["call"] = self["call"];
-		executer["buildURL"] = self["buildURL"];
-		executer["get"] = self["get"];
-		executer["post"] = self["post"];
-		executer["put"] = self["put"];
-		executer["delete"] = self["delete"];
-		executer["xhr"] = new XMLHttpRequest();
-		this.exec = executer;
-		//Dirty but powerful.
-		// return executer;
-	}
-
-	private call(method: string, url: string, data?: any, dataType?: Object, async: boolean = true): Object {
-		var self = this;
-		self.xhr.open(method, url, async);
-
-		if (ALLOWED_METHODS.indexOf(method.toLowerCase()) < 0)
-			throw TypeError("Method not supported:\n" + "The call " + method + " is not supported");
-
-		//todo: test consistency in the header set by the user.
-		if (dataType) JSSON(dataType).forEach((val, pro) => {
-			self.xhr.setRequestHeader(pro, val);
-		});
-
-		//For a succeeded query.
-		return {
-			"success": (successCallback: Function): Object => {
-
-				self.xhr.onreadystatechange = () => {
-					if (self.xhr.status === 200 && self.xhr.readyState === 4) {
-						successCallback.call(this, self.xhr.response, self.xhr.getAllResponseHeaders());
-					} else if (self.xhr.status !== 200 && self.xhr.readyState === 4) {
-						throw Error("Data not received:\n" + "Details: " + self.xhr.statusText);
-					}
-				};
-
-				//If the data passed is a JSON and the dataType is an x-www ... convert the json to a string
-				//Todo: needs improvement for arrays, objects and others.
-				if (data.constructor.name === "Object" &&
-					dataType["Content-Type"] === "application/x-www-form-urlencoded") {
-					data = JSSON(data)
-						.map((value: any, key: string) =>
-							key.concat("=").concat(value))
-						.join("&");
-				} else if (data.constructor.name === "Object" &&
-					dataType["Content-Type"] === "application/json") {
-					data = JSON.stringify(data);
-				}
-
-				//If data was passed send it, some people use get, put, delete to send data...:(
-				data ? self.xhr.send(data) : self.xhr.send();
-
-				//If error is present
-				return {
-					"error": (errorCallback: Function): void => {
-						self.xhr.onreadystatechange = () => {
-							if (self.xhr.status === 200 && self.xhr.readyState === 4) {
-								successCallback.call(this, self.xhr.response, self.xhr.getAllResponseHeaders());
-							} else if (self.xhr.status !== 200 && self.xhr.readyState === 4) {
-								errorCallback.call(this, self.xhr.statusText, self.xhr.getAllResponseHeaders())
-							}
-						};
-					}
-				};
-			}
-		};
-	}
-
-	public get(url: string, parameters: Object, data?: any, dataType?: Object, async: boolean = true): Object {
-		return this.call("GET", this.buildURL(url, parameters), data, dataType, async);
-	}
-
-	public post(url: string, data?: any, dataType?: Object, async: boolean = true): Object {
-		var DEFAULT_POST_HEADER: Object = {
-			"Content-Type": "application/json"
-		};
-
-		return this.call("POST", url, data, dataType || DEFAULT_POST_HEADER, async);
-	}
-
-	public put(url: string, parameters: Object, data?: any, dataType?: Object, async: boolean = true): Object {
-		return this.call("PUT", this.buildURL(url, parameters), data, dataType, async);
-	}
-
-	public delete(url: string, parameters: Object, data?: any, dataType?: Object, async: boolean = true): Object {
-		return this.call("DELETE", this.buildURL(url, parameters), data, dataType, async);
-	}
-
-	//This call receives a object and writes the parameters from it.
-	private buildURL = (baseURI: string, params: Object): string => baseURI + "?" + JSSON(params).map((value, att) => att + "=" + (value.constructor === Array ? value.join(",") : value)).join("&")
-
-}
 
 
