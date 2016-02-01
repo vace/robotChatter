@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <div class="chat-app">
+    <div class="chat-app" style="-webkit-transform-origin:50% 50% 0px;-webkit-transform:scale(0.9);">
       <status-box :user="user"></status-box>
       <friend-box :friends="message.friends"></friend-box>
       <message-box :inputing="message.inpitingUsername" :messages="message.messages" :type="message_type"></message-box>
