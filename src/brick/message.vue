@@ -97,7 +97,7 @@
             scorllBottom:function(){
                 var scroll = this.$els.msgbox ;
                 this.$nextTick(()=>{
-                    scroll.scrollTop = scroll.scrollHeight - scroll.clientHeight;
+                    scroll.scrollTop = scroll.scrollHeight - scroll.clientHeight + 80;
                 });
             }
         }
